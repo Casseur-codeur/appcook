@@ -268,7 +268,7 @@ const ISSUE_LABELS = {
   unit_incompatible: 'Unité incompatible — ajouté sans conversion',
 }
 
-function StepRevision({ onBack, onConfirm, issues = [] }) {
+function StepRevision({ onBack, onConfirm, issues = [], abandoned = [] }) {
   const [items, setItems]     = useState([])
   const [catalog, setCatalog] = useState([])
   const [loading, setLoading] = useState(true)
@@ -277,6 +277,8 @@ function StepRevision({ onBack, onConfirm, issues = [] }) {
   const [newUnit, setNewUnit]       = useState('')
   const [newCat, setNewCat]         = useState('Divers')
   const [adding, setAdding]         = useState(false)
+  const [addingAbandoned, setAddingAbandoned] = useState(false)
+  const [pendingAbandoned, setPendingAbandoned] = useState(abandoned)
   const inputRef = useRef(null)
 
   useEffect(() => {
@@ -286,6 +288,25 @@ function StepRevision({ onBack, onConfirm, issues = [] }) {
       setLoading(false)
     })
   }, [])
+
+  // Ajouter tous les abandonnés à la liste
+  const handleAddAbandoned = async () => {
+    setAddingAbandoned(true)
+    try {
+      const added = []
+      for (const item of pendingAbandoned) {
+        const { id } = await addShoppingItem({
+          name: item.name, qty: item.qty,
+          unit: item.unit || '', category: item.category || 'Divers',
+        })
+        added.push({ id, ...item, checked: false, missing: false, source: 'manual' })
+      }
+      setItems(prev => [...prev, ...added])
+      setPendingAbandoned([])
+      sessionStorage.removeItem('appcook_abandoned')
+    } catch (e) { alert(e.message) }
+    setAddingAbandoned(false)
+  }
 
   const listNames = new Set(items.map(i => i.name.toLowerCase()))
   const q = query.toLowerCase()
@@ -350,6 +371,49 @@ function StepRevision({ onBack, onConfirm, issues = [] }) {
       <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '0 0 16px' }}>
         {items.length} article{items.length > 1 ? 's' : ''} — retire ou ajoute avant de partir.
       </p>
+
+      {/* ── Abandonnés de la dernière liste ── */}
+      {pendingAbandoned.length > 0 && (
+        <div style={{
+          background: 'rgba(255,152,0,0.1)', border: '1.5px solid rgba(255,152,0,0.4)',
+          borderRadius: '12px', padding: '12px 14px', marginBottom: '16px',
+        }}>
+          <div style={{ fontWeight: 700, color: '#FF9800', fontSize: '0.9rem', marginBottom: '6px' }}>
+            👻 Manquaient la dernière fois ({pendingAbandoned.length})
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', marginBottom: '10px' }}>
+            {pendingAbandoned.map((item, i) => (
+              <div key={i} style={{ fontSize: '0.85rem', color: 'var(--text-primary)' }}>
+                • {item.name}{item.qty ? ` — ${item.qty % 1 === 0 ? item.qty : item.qty.toFixed(1)} ${item.unit}` : ''}
+              </div>
+            ))}
+          </div>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              onClick={handleAddAbandoned}
+              disabled={addingAbandoned}
+              style={{
+                flex: 2, padding: '9px', borderRadius: '10px', border: 'none',
+                background: '#FF9800', color: 'white', fontWeight: 600,
+                cursor: 'pointer', fontSize: '0.85rem',
+                opacity: addingAbandoned ? 0.7 : 1,
+              }}
+            >
+              {addingAbandoned ? '…' : '+ Ajouter à la liste'}
+            </button>
+            <button
+              onClick={() => { setPendingAbandoned([]); sessionStorage.removeItem('appcook_abandoned') }}
+              style={{
+                flex: 1, padding: '9px', borderRadius: '10px', border: 'none',
+                background: 'var(--bg-tertiary)', color: 'var(--text-muted)',
+                cursor: 'pointer', fontSize: '0.85rem',
+              }}
+            >
+              Ignorer
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ── Bandeau d'issues (ingrédients sans unité, conversions impossibles) ── */}
       {issues.length > 0 && (
@@ -503,12 +567,13 @@ export default function ShoppingSelect({ forceNew = false }) {
     setGenerating(true)
     try {
       const codes = Object.keys(selectedRecipes)
-      const avgPersons = codes.length > 0
-        ? Object.values(selectedRecipes).reduce((s, v) => s + v.persons, 0) / codes.length
-        : 1
+      // Portions par recette — chacune a sa propre valeur
+      const recipe_portions = Object.fromEntries(
+        codes.map(c => [c, selectedRecipes[c].persons])
+      )
       const result = await generateList({
         recipe_codes: codes,
-        persons: avgPersons,
+        recipe_portions,
         bundle_id: selectedBundle,
         manual_items: [],
         include_optional: includeOptional,
@@ -516,7 +581,14 @@ export default function ShoppingSelect({ forceNew = false }) {
       // Capturer les issues (ingrédients sans unité ou unités incompatibles)
       setGenIssues(result?.issues || [])
       // Capturer les articles manquants de la liste précédente pour les proposer à ShoppingList
-      setMissingFromPrevious(result?.missing_from_previous || [])
+      const missing = result?.missing_from_previous || []
+      setMissingFromPrevious(missing)
+      // Backup sessionStorage : résiste aux navigations inattendues
+      if (missing.length > 0) {
+        sessionStorage.setItem('appcook_abandoned', JSON.stringify(missing))
+      } else {
+        sessionStorage.removeItem('appcook_abandoned')
+      }
       setStep(3)
     } catch (e) {
       alert('Erreur lors de la génération : ' + e.message)
@@ -549,21 +621,17 @@ export default function ShoppingSelect({ forceNew = false }) {
           bundles={bundles}
           selectedBundle={selectedBundle}
           setSelectedBundle={setSelectedBundle}
-          onBack={() => setStep(1)}
           onNext={handleStep2Next}
+          onBack={() => setStep(1)}
         />
       )}
 
       {step === 3 && (
         <StepRevision
           issues={genIssues}
-          onBack={() => {
-            // On ne peut pas "dé-générer" proprement, on repart à zéro
-            setStep(1)
-            setSelectedRecipes({})
-            setSelectedBundle(null)
-          }}
-          onConfirm={() => navigate('/shopping/list', { state: { missingFromPrevious } })}
+          abandoned={missingFromPrevious}
+          onBack={() => setStep(2)}
+          onConfirm={() => navigate('/shopping/list')}
         />
       )}
     </div>

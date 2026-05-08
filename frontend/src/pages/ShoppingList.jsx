@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { getCurrentList, toggleShoppingItem, addShoppingItem, deleteShoppingItem, completeShoppingList } from '../api/client'
 import ProgressBar from '../components/ProgressBar'
 
@@ -12,19 +12,14 @@ function nextState(item) {
 
 export default function ShoppingList() {
   const navigate = useNavigate()
-  const location = useLocation()
-  const [items, setItems] = useState([])
+const [items, setItems] = useState([])
   const [listId, setListId] = useState(null)
   const [loading, setLoading] = useState(true)
   const [newItemName, setNewItemName] = useState('')
   const [addingItem, setAddingItem] = useState(false)
   const inputRef = useRef(null)
 
-  // Articles manquants de la liste précédente — proposés à l'import
-  const [abandoned, setAbandoned] = useState(
-    (location.state?.missingFromPrevious || [])
-  )
-  const [addingAbandoned, setAddingAbandoned] = useState(false)
+  // (les articles "abandonnés" sont désormais proposés en Step 3 de ShoppingSelect)
 
   useEffect(() => {
     loadList()
@@ -100,27 +95,6 @@ export default function ShoppingList() {
   }
 
   // Ajouter tous les articles abandonnés à la liste
-  const handleAddAbandoned = async () => {
-    setAddingAbandoned(true)
-    try {
-      const added = []
-      for (const item of abandoned) {
-        const { id } = await addShoppingItem({
-          name: item.name,
-          qty: item.qty,
-          unit: item.unit || '',
-          category: item.category || 'Divers',
-        })
-        added.push({ id, ...item, checked: false, missing: false, source: 'manual' })
-      }
-      setItems(prev => [...prev, ...added])
-      setAbandoned([])
-    } catch (e) {
-      alert('Erreur : ' + e.message)
-    }
-    setAddingAbandoned(false)
-  }
-
   // Terminer les courses
   const handleComplete = async () => {
     if (!confirm('Marquer les courses comme terminées ? La liste sera archivée.')) return
@@ -178,51 +152,6 @@ export default function ShoppingList() {
       {/* Progression */}
       <ProgressBar current={checkedCount} total={items.length} label="Articles cochés" />
 
-      {/* Bandeau "Les abandonnés de la dernière fois" */}
-      {abandoned.length > 0 && (
-        <div style={{
-          margin: '0 16px 16px',
-          background: 'rgba(255,152,0,0.12)',
-          border: '1.5px solid rgba(255,152,0,0.35)',
-          borderRadius: '14px',
-          padding: '14px 16px',
-        }}>
-          <div style={{ fontWeight: 700, fontSize: '0.95rem', marginBottom: '6px', color: '#FF9800' }}>
-            👻 Les abandonnés de la dernière fois
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '12px' }}>
-            {abandoned.map((item, i) => (
-              <div key={i} style={{ fontSize: '0.9rem', color: 'var(--text-primary)', display: 'flex', gap: '6px' }}>
-                <span style={{ color: '#FF9800' }}>⚠</span>
-                <span>{item.name}{item.qty ? ` — ${item.qty % 1 === 0 ? item.qty : item.qty.toFixed(1)} ${item.unit}` : ''}</span>
-              </div>
-            ))}
-          </div>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <button
-              onClick={handleAddAbandoned}
-              disabled={addingAbandoned}
-              style={{
-                flex: 1, padding: '10px', borderRadius: '10px', border: 'none',
-                background: '#FF9800', color: 'white', fontWeight: 600,
-                cursor: 'pointer', fontSize: '0.9rem',
-              }}
-            >
-              {addingAbandoned ? '⏳ Ajout...' : '+ Ajouter à la liste'}
-            </button>
-            <button
-              onClick={() => setAbandoned([])}
-              style={{
-                flex: 1, padding: '10px', borderRadius: '10px', border: 'none',
-                background: 'var(--bg-tertiary)', color: 'var(--text-muted)',
-                cursor: 'pointer', fontSize: '0.9rem',
-              }}
-            >
-              Ignorer
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Message de complétion */}
       {allDone && (
@@ -359,6 +288,15 @@ function ShoppingItem({ item, onToggle, onDelete }) {
         {item.qty != null && (
           <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginLeft: '8px' }}>
             {item.qty % 1 === 0 ? item.qty : item.qty.toFixed(1)} {item.unit}
+          </span>
+        )}
+        {/* Indication : re-taper pour marquer manquant */}
+        {isDone && !isMissing && (
+          <span style={{
+            marginLeft: '8px', fontSize: '0.68rem', color: 'var(--text-muted)',
+            opacity: 0.6,
+          }}>
+            · retaper → ⚠
           </span>
         )}
         {/* Badge manquant reporté */}

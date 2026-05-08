@@ -716,7 +716,10 @@ def save_step_ingredients(conn, step_id: int, recipe_ingredient_ids: List[int]):
 # 10) Shopping list
 # =============================================================================
 
-def aggregate_shopping_list(conn, recipe_codes: List[str], persons: float, include_optional: bool):
+def aggregate_shopping_list(conn, recipe_codes: List[str], persons_map: Dict[str, float], include_optional: bool):
+    """
+    persons_map : { recipe_code: persons } — portions par recette.
+    """
     if not recipe_codes:
         return [], []
 
@@ -746,7 +749,8 @@ def aggregate_shopping_list(conn, recipe_codes: List[str], persons: float, inclu
             continue
 
         base = float(base_servings or 1)
-        factor = float(persons) / base if base else 1.0
+        persons = float(persons_map.get(code, 1))
+        factor = persons / base if base else 1.0
         scaled_qty = (float(qty) if qty is not None else 0.0) * factor
 
         default_unit = (default_unit or "").strip()
@@ -1340,7 +1344,7 @@ def get_active_list(conn) -> Optional[Dict]:
 def generate_shopping_list(
     conn,
     recipe_codes: List[str],
-    persons: float,
+    persons_map: Dict[str, float],
     bundle_id: Optional[int],
     manual_items: Optional[List[Dict]],
     include_optional: bool = False,
@@ -1383,7 +1387,7 @@ def generate_shopping_list(
 
     # --- Ingrédients des recettes ---
     if recipe_codes:
-        items, recipe_issues = aggregate_shopping_list(conn, recipe_codes, persons, include_optional)
+        items, recipe_issues = aggregate_shopping_list(conn, recipe_codes, persons_map, include_optional)
         issues.extend(recipe_issues)
         for item in items:
             # Récupérer la catégorie depuis le catalogue

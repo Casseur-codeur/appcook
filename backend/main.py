@@ -104,7 +104,8 @@ class BundleItemIn(BaseModel):
 
 class GenerateShoppingRequest(BaseModel):
     recipe_codes: Optional[List[str]] = []
-    persons: float = 1.0
+    persons: float = 1.0                            # fallback si recipe_portions absent
+    recipe_portions: Optional[Dict[str, float]] = {}  # { code: persons } — prioritaire
     bundle_id: Optional[int] = None
     manual_items: Optional[List[Dict[str, Any]]] = []
     include_optional: bool = False
@@ -367,8 +368,9 @@ def get_history(limit: int = Query(20)):
 def generate_shopping_list(payload: ShoppingRequest):
     conn = db.get_conn()
     try:
+        persons_map = {c: payload.persons for c in (payload.recipe_codes or [])}
         items, issues = db.aggregate_shopping_list(
-            conn, payload.recipe_codes, payload.persons, payload.include_optional
+            conn, payload.recipe_codes, persons_map, payload.include_optional
         )
         return {"items": items, "issues": issues}
     finally:
@@ -533,10 +535,17 @@ def generate_list(payload: GenerateShoppingRequest):
     propose à l'utilisateur de les inclure ou non."""
     conn = db.get_conn()
     try:
+        codes = payload.recipe_codes or []
+        # Construire le dict { code: persons } — recipe_portions est prioritaire
+        if payload.recipe_portions:
+            persons_map = {c: float(payload.recipe_portions.get(c, payload.persons)) for c in codes}
+        else:
+            persons_map = {c: payload.persons for c in codes}
+
         active_list, issues, missing_from_previous = db.generate_shopping_list(
             conn,
-            recipe_codes=payload.recipe_codes or [],
-            persons=payload.persons,
+            recipe_codes=codes,
+            persons_map=persons_map,
             bundle_id=payload.bundle_id,
             manual_items=payload.manual_items or [],
             include_optional=payload.include_optional,
