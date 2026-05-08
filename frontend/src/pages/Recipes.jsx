@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { getRecipes, getSuggestedRecipe, getCategories, getOrigins, getStats } from '../api/client'
 import RecipeCard from '../components/RecipeCard'
 import FilterChips from '../components/FilterChips'
+import LoadingScreen from '../components/LoadingScreen'
+import EmptyState from '../components/EmptyState'
 
 const TIME_OPTIONS = [
   { value: '20',  label: '⚡ < 20 min' },
@@ -119,9 +121,7 @@ export default function Recipes() {
       )}
 
       {loading ? (
-        <div style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)' }}>
-          Chargement...
-        </div>
+        <LoadingScreen message="Chargement des recettes..." />
       ) : (
         <div style={{ padding: '0 16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
 
@@ -132,9 +132,10 @@ export default function Recipes() {
           {recipes.map(r => <RecipeCard key={r.code} recipe={r} />)}
 
           {recipes.length === 0 && !suggested && (
-            <div style={{ textAlign: 'center', padding: '48px 0', color: 'var(--text-muted)' }}>
-              Aucune recette pour ces filtres.
-            </div>
+            <EmptyState
+              title="Aucune recette pour ces filtres"
+              message="Essaie de changer les filtres ou ajoute de nouvelles recettes."
+            />
           )}
 
         </div>

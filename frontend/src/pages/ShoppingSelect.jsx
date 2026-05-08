@@ -4,6 +4,7 @@ import {
   getRecipes, getBundles, generateList, getCurrentList,
   deleteShoppingItem, addShoppingItem, searchIngredients, getCatalog,
 } from '../api/client'
+import EmptyState from '../components/EmptyState'
 
 const CATEGORIES = ['Épicerie', 'Frais', 'Boucherie', 'Fruits & Légumes', 'Surgelés', 'Boissons', 'Hygiène', 'Divers']
 
@@ -146,9 +147,10 @@ function StepRecettes({ recipes, selected, setSelected, onNext }) {
         })}
 
         {recipes.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-            Aucune recette enregistrée
-          </div>
+          <EmptyState
+            title="Aucune recette enregistrée"
+            message="Ajoute des recettes depuis l'onglet Admin pour commencer."
+          />
         )}
       </div>
 
