@@ -11,9 +11,13 @@ export default function Home() {
     }}>
 
       <div style={{ textAlign: 'center', marginBottom: '16px' }}>
-        <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>🍳</div>
+        <img
+          src="/icons/icon-192.png"
+          alt="Oh non j'ai faim"
+          style={{ width: '96px', height: '96px', borderRadius: '22px', marginBottom: '12px', display: 'block', margin: '0 auto 12px' }}
+        />
         <h1 style={{ margin: 0, fontSize: '1.8rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-          AppCook
+          Oh non j'ai faim
         </h1>
         <p style={{ margin: '6px 0 0', color: 'var(--text-muted)', fontSize: '0.95rem' }}>
           Qu'est-ce qu'on fait ?

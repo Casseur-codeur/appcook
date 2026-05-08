@@ -1,5 +1,7 @@
+import { useState, useEffect } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import BottomNav from './components/BottomNav'
+import LoadingScreen from './components/LoadingScreen'
 import Home from './pages/Home'
 import Recipes from './pages/Recipes'
 import RecipeDetail from './pages/RecipeDetail'
@@ -10,6 +12,16 @@ import Stats from './pages/Stats'
 import Admin from './pages/Admin'
 
 export default function App() {
+  const [appReady, setAppReady] = useState(false)
+
+  useEffect(() => {
+    // Splash screen au démarrage — laisse l'API le temps de répondre
+    const timer = setTimeout(() => setAppReady(true), 1500)
+    return () => clearTimeout(timer)
+  }, [])
+
+  if (!appReady) return <LoadingScreen />
+
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
 
