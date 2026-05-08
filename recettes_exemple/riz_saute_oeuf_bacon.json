@@ -1,0 +1,54 @@
+{
+  "schema_version": "appcook.recipe.v1",
+  "recipe": {
+    "title": "Riz sauté oeuf bacon",
+    "servings": 1,
+    "notes": "Idéal pour écouler du riz cuit de la veille. Avec du riz froid c'est encore meilleur.",
+    "ingredients": [
+      { "name": "Riz cuit (froid de préférence)", "qty": 200, "unit": "g" },
+      { "name": "Bacon", "qty": 80, "unit": "g" },
+      { "name": "Oeuf", "qty": 2, "unit": "pièce" },
+      { "name": "Sauce soja", "qty": 2, "unit": "cs" },
+      { "name": "Huile de sésame", "qty": 1, "unit": "cc" },
+      { "name": "Ail", "qty": 1, "unit": "gousse" },
+      { "name": "Poivre", "qty": 1, "unit": "pincée", "show_qty_in_list": false }
+    ],
+    "steps": [
+      {
+        "title": "Cuire le bacon",
+        "text": "Couper le bacon en lardons. Dans une grande poêle ou wok à feu vif, cuire le bacon jusqu'à ce qu'il soit croustillant. Réserver sur une assiette sans jeter la graisse.",
+        "time_sec": 240,
+        "ingredients": [
+          { "name": "Bacon" }
+        ]
+      },
+      {
+        "title": "Sauter le riz",
+        "text": "Dans la même poêle à feu vif, ajouter l'ail écrasé. Ajouter le riz froid et écraser les grains avec une spatule. Laisser dorer 2-3 min sans trop remuer pour avoir des parties croustillantes.",
+        "time_sec": 240,
+        "ingredients": [
+          { "name": "Riz cuit (froid de préférence)" },
+          { "name": "Ail" }
+        ]
+      },
+      {
+        "title": "Ajouter les oeufs",
+        "text": "Pousser le riz sur les côtés. Casser les oeufs au centre de la poêle, brouiller rapidement puis mélanger avec le riz avant que ça soit trop cuit.",
+        "time_sec": 90,
+        "ingredients": [
+          { "name": "Oeuf" }
+        ]
+      },
+      {
+        "title": "Finir et assaisonner",
+        "text": "Remettre le bacon. Arroser de sauce soja et d'huile de sésame. Poivrer. Mélanger rapidement 30 secondes et servir immédiatement.",
+        "time_sec": 60,
+        "ingredients": [
+          { "name": "Sauce soja" },
+          { "name": "Huile de sésame" },
+          { "name": "Poivre" }
+        ]
+      }
+    ]
+  }
+}

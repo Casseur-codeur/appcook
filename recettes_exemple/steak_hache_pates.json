@@ -1,0 +1,46 @@
+{
+  "schema_version": "appcook.recipe.v1",
+  "recipe": {
+    "title": "Steak haché pâtes express",
+    "servings": 1,
+    "notes": "Prêt en 15 min. Peut se faire avec n'importe quelle forme de pâtes.",
+    "ingredients": [
+      { "name": "Steak haché", "qty": 150, "unit": "g" },
+      { "name": "Pâtes", "qty": 100, "unit": "g" },
+      { "name": "Beurre", "qty": 15, "unit": "g" },
+      { "name": "Paprika fumé", "qty": 1, "unit": "cc" },
+      { "name": "Sel", "qty": 1, "unit": "pincée", "show_qty_in_list": false },
+      { "name": "Poivre", "qty": 1, "unit": "pincée", "show_qty_in_list": false }
+    ],
+    "steps": [
+      {
+        "title": "Cuire les pâtes",
+        "text": "Porter une grande casserole d'eau salée à ébullition. Cuire les pâtes selon les indications du paquet (généralement 8-10 min). Égoutter en gardant une louche d'eau de cuisson.",
+        "time_sec": 600,
+        "ingredients": [
+          { "name": "Pâtes" },
+          { "name": "Sel" }
+        ]
+      },
+      {
+        "title": "Cuire le steak",
+        "text": "Faire chauffer une poêle à feu vif sans matière grasse. Saler et poivrer le steak. Cuire 2-3 min par face selon épaisseur. Émietter grossièrement dans la poêle avec une spatule.",
+        "time_sec": 300,
+        "ingredients": [
+          { "name": "Steak haché" },
+          { "name": "Sel" },
+          { "name": "Poivre" }
+        ]
+      },
+      {
+        "title": "Assembler",
+        "text": "Baisser le feu. Ajouter les pâtes égouttées dans la poêle avec la viande. Ajouter le beurre et le paprika fumé. Mélanger 1 min en ajoutant un peu d'eau de cuisson si trop sec.",
+        "time_sec": 120,
+        "ingredients": [
+          { "name": "Beurre" },
+          { "name": "Paprika fumé" }
+        ]
+      }
+    ]
+  }
+}

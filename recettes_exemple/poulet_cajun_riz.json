@@ -1,0 +1,55 @@
+{
+  "schema_version": "appcook.recipe.v1",
+  "recipe": {
+    "title": "Poulet cajun riz",
+    "servings": 2,
+    "notes": "Batch cooking : double les quantités et stocke 2 jours au frigo. Idéal avec du riz complet.",
+    "ingredients": [
+      { "name": "Blanc de poulet", "qty": 400, "unit": "g" },
+      { "name": "Riz", "qty": 200, "unit": "g" },
+      { "name": "Épices cajun", "qty": 2, "unit": "cs" },
+      { "name": "Huile d'olive", "qty": 2, "unit": "cs" },
+      { "name": "Ail", "qty": 2, "unit": "gousse" },
+      { "name": "Sel", "qty": 1, "unit": "pincée", "show_qty_in_list": false },
+      { "name": "Poivre", "qty": 1, "unit": "pincée", "show_qty_in_list": false }
+    ],
+    "steps": [
+      {
+        "title": "Cuire le riz",
+        "text": "Rincer le riz, le mettre dans une casserole avec 400 ml d'eau froide et une pincée de sel. Porter à ébullition puis couvrir et cuire à feu doux.",
+        "time_sec": 720,
+        "ingredients": [
+          { "name": "Riz" },
+          { "name": "Sel" }
+        ]
+      },
+      {
+        "title": "Préparer le poulet",
+        "text": "Couper le poulet en cubes de 3 cm environ. Dans un bol, mélanger les épices cajun avec une cuillère d'huile. Enrober le poulet de ce mélange.",
+        "time_sec": 180,
+        "ingredients": [
+          { "name": "Blanc de poulet" },
+          { "name": "Épices cajun" },
+          { "name": "Huile d'olive" }
+        ]
+      },
+      {
+        "title": "Cuire le poulet",
+        "text": "Faire chauffer une poêle à feu vif avec le reste d'huile. Écraser l'ail dans la poêle. Cuire les cubes de poulet 4-5 min en remuant jusqu'à ce qu'ils soient bien dorés. Saler et poivrer.",
+        "time_sec": 360,
+        "ingredients": [
+          { "name": "Blanc de poulet" },
+          { "name": "Ail" },
+          { "name": "Huile d'olive" },
+          { "name": "Sel" },
+          { "name": "Poivre" }
+        ]
+      },
+      {
+        "title": "Dresser",
+        "text": "Servir le poulet cajun sur le riz. Si batch cooking : laisser refroidir avant de diviser en portions et mettre au frigo.",
+        "time_sec": 60
+      }
+    ]
+  }
+}
