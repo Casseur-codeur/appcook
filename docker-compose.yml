@@ -1,0 +1,18 @@
+services:
+  api:
+    build: ./backend
+    container_name: appcook_api
+    volumes:
+      - /volume1/docker/appcook/data:/data
+    environment:
+      - APPCOOK_DB_FILE=/data/recettes.db
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    container_name: appcook_frontend
+    ports:
+      - "8082:80"
+    depends_on:
+      - api
+    restart: unless-stopped
