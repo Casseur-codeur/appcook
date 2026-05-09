@@ -9,8 +9,10 @@ export default function Stats() {
   const [newGoal, setNewGoal] = useState('')
   const [saving, setSaving] = useState(false)
 
+  const [error, setError] = useState(false)
+
   useEffect(() => {
-    getStats().then(setStats)
+    getStats().then(setStats).catch(() => setError(true))
   }, [])
 
   const handleSaveGoal = async () => {
@@ -23,6 +25,16 @@ export default function Stats() {
     setEditingGoal(false)
     setSaving(false)
   }
+
+  if (error) return (
+    <div style={{ textAlign: 'center', padding: '64px', color: 'var(--text-muted)' }}>
+      <div style={{ fontSize: '2rem', marginBottom: '12px' }}>⚠️</div>
+      <p>Impossible de charger les stats.</p>
+      <button className="btn-primary" onClick={() => { setError(false); getStats().then(setStats).catch(() => setError(true)) }}>
+        Réessayer
+      </button>
+    </div>
+  )
 
   if (!stats) return (
     <div style={{ textAlign: 'center', padding: '64px', color: 'var(--text-muted)' }}>

@@ -292,19 +292,24 @@ function StepRevision({ onBack, onConfirm, issues = [], abandoned = [] }) {
   // Ajouter tous les abandonnés à la liste
   const handleAddAbandoned = async () => {
     setAddingAbandoned(true)
-    try {
-      const added = []
-      for (const item of pendingAbandoned) {
+    // Vider sessionStorage dès le début pour éviter les doublons en cas d'erreur partielle
+    sessionStorage.removeItem('appcook_abandoned')
+    const added = []
+    const failed = []
+    for (const item of pendingAbandoned) {
+      try {
         const { id } = await addShoppingItem({
           name: item.name, qty: item.qty,
           unit: item.unit || '', category: item.category || 'Divers',
         })
         added.push({ id, ...item, checked: false, missing: false, source: 'manual' })
+      } catch {
+        failed.push(item.name)
       }
-      setItems(prev => [...prev, ...added])
-      setPendingAbandoned([])
-      sessionStorage.removeItem('appcook_abandoned')
-    } catch (e) { alert(e.message) }
+    }
+    if (added.length > 0) setItems(prev => [...prev, ...added])
+    setPendingAbandoned([])
+    if (failed.length > 0) alert(`Impossible d'ajouter : ${failed.join(', ')}`)
     setAddingAbandoned(false)
   }
 
@@ -523,9 +528,14 @@ function StepRevision({ onBack, onConfirm, issues = [], abandoned = [] }) {
       )}
 
       {/* Boutons fixes */}
-      <div style={{ position: 'fixed', bottom: 64, left: 0, right: 0, padding: '12px 16px', background: 'var(--bg-primary)', borderTop: '1px solid var(--bg-tertiary)', display: 'flex', gap: '10px' }}>
-        <button onClick={onBack} style={{ flex: 1, padding: '14px', borderRadius: '14px', border: 'none', background: 'var(--bg-tertiary)', color: 'var(--text-muted)', fontWeight: 600, fontSize: '0.95rem', cursor: 'pointer' }}>← Retour</button>
-        <button className="btn-primary" onClick={onConfirm} style={{ flex: 2 }}>C'est parti 🛒</button>
+      <div style={{ position: 'fixed', bottom: 64, left: 0, right: 0, padding: '12px 16px', background: 'var(--bg-primary)', borderTop: '1px solid var(--bg-tertiary)' }}>
+        <div style={{ display: 'flex', gap: '10px', marginBottom: '8px' }}>
+          <button onClick={onBack} style={{ flex: 1, padding: '14px', borderRadius: '14px', border: 'none', background: 'var(--bg-tertiary)', color: 'var(--text-muted)', fontWeight: 600, fontSize: '0.95rem', cursor: 'pointer' }}>← Retour</button>
+          <button className="btn-primary" onClick={onConfirm} style={{ flex: 2 }}>C'est parti 🛒</button>
+        </div>
+        <p style={{ margin: 0, fontSize: '0.72rem', color: 'var(--text-muted)', textAlign: 'center', lineHeight: 1.4 }}>
+          ℹ️ La liste est déjà enregistrée — "Retour" revient à l'étape précédente sans la supprimer.
+        </p>
       </div>
     </div>
   )

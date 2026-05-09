@@ -81,7 +81,7 @@ const [items, setItems] = useState([])
   // Ajouter un article manuel
   const handleAddItem = async () => {
     const name = newItemName.trim()
-    if (!name) return
+    if (!name || addingItem) return   // guard double-submit via Enter rapide
     setAddingItem(true)
     try {
       const { id } = await addShoppingItem({ name, category: 'Divers' })
@@ -94,12 +94,16 @@ const [items, setItems] = useState([])
     setAddingItem(false)
   }
 
-  // Ajouter tous les articles abandonnés à la liste
   // Terminer les courses
   const handleComplete = async () => {
     if (!confirm('Marquer les courses comme terminées ? La liste sera archivée.')) return
-    await completeShoppingList()
-    navigate('/shopping')
+    try {
+      await completeShoppingList()
+      sessionStorage.removeItem('appcook_abandoned')  // nettoyage après archivage
+      navigate('/shopping')
+    } catch (e) {
+      alert('Erreur lors de la clôture : ' + e.message)
+    }
   }
 
   const copyToClipboard = () => {
@@ -110,6 +114,7 @@ const [items, setItems] = useState([])
       ),
     ])
     navigator.clipboard.writeText(lines.join('\n').trim())
+      .catch(() => alert('Copie non disponible (HTTP requis). Appuyez longuement sur la liste pour copier manuellement.'))
   }
 
   if (loading) return (
@@ -229,11 +234,13 @@ const [items, setItems] = useState([])
       <div style={{ padding: '0 16px' }}>
         <button
           onClick={handleComplete}
+          disabled={items.length === 0}
           style={{
             width: '100%', padding: '14px', borderRadius: '14px', border: 'none',
             background: allDone ? 'var(--success)' : 'var(--bg-secondary)',
             color: allDone ? 'white' : 'var(--text-muted)',
-            fontWeight: 600, fontSize: '0.95rem', cursor: 'pointer', transition: 'all 0.2s',
+            fontWeight: 600, fontSize: '0.95rem', cursor: items.length === 0 ? 'not-allowed' : 'pointer',
+            transition: 'all 0.2s', opacity: items.length === 0 ? 0.4 : 1,
           }}
         >
           {allDone ? '✓ Courses terminées — Archiver' : 'Terminer les courses'}

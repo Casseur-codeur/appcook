@@ -2,7 +2,7 @@
  * Import / Export JSON de recettes.
  */
 import { useState, useRef } from 'react'
-import { importRecipe, exportRecipe, getRecipes } from '../../api/client'
+import { importRecipe, exportAllRecipes } from '../../api/client'
 
 export default function AdminImportExport() {
   const [importResults, setImportResults] = useState([])
@@ -49,14 +49,18 @@ export default function AdminImportExport() {
   }
 
   const handleExportAll = async () => {
-    const list = await getRecipes()
-    const exports = await Promise.all(list.map(r => exportRecipe(r.code)))
-    const blob = new Blob([JSON.stringify(exports, null, 2)], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'appcook_recettes.json'
-    a.click()
+    try {
+      const exports = await exportAllRecipes()
+      const blob = new Blob([JSON.stringify(exports, null, 2)], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'appcook_recettes.json'
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (e) {
+      alert('Erreur export : ' + e.message)
+    }
   }
 
   return (

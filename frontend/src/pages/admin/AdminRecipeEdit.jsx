@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { getRecipe, createFullRecipe, updateFullRecipe } from '../../api/client'
 import IngredientSearch from '../../components/IngredientSearch'
@@ -210,6 +210,18 @@ export default function AdminRecipeEdit() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(isEdit)
+  const isDirty = useRef(false)   // true dès que l'utilisateur a touché le formulaire
+
+  // ── Guard beforeunload (fermeture/rechargement onglet) ────────────────────
+  useEffect(() => {
+    const handler = (e) => {
+      if (!isDirty.current) return
+      e.preventDefault()
+      e.returnValue = ''
+    }
+    window.addEventListener('beforeunload', handler)
+    return () => window.removeEventListener('beforeunload', handler)
+  }, [])
 
   // ── Chargement de la recette en mode édition ──────────────────────────────
   useEffect(() => {
@@ -234,17 +246,27 @@ export default function AdminRecipeEdit() {
     }).catch(() => setLoading(false))
   }, [code])
 
+  // ── Navigation sécurisée (confirm si modif non sauvegardées) ─────────────
+  const safeNavigate = (path) => {
+    if (isDirty.current && !confirm('Des modifications non sauvegardées seront perdues. Continuer ?')) return
+    isDirty.current = false
+    navigate(path)
+  }
+
   // ── Handlers ingrédients ──────────────────────────────────────────────────
   const handleAddIngredient = ({ name }) => {
+    isDirty.current = true
     if (ingredients.some(i => i.name.toLowerCase() === name.toLowerCase())) return
     setIngredients(prev => [...prev, { _id: uid(), name, qty: '', unit: '', optional: false, notes: '' }])
   }
 
   const handleChangeIngredient = (id, updated) => {
+    isDirty.current = true
     setIngredients(prev => prev.map(i => i._id === id ? updated : i))
   }
 
   const handleDeleteIngredient = (id, name) => {
+    isDirty.current = true
     setIngredients(prev => prev.filter(i => i._id !== id))
     // Retirer cet ingrédient de toutes les étapes
     setSteps(prev => prev.map(s => ({
@@ -255,20 +277,24 @@ export default function AdminRecipeEdit() {
 
   // ── Handlers étapes ───────────────────────────────────────────────────────
   const handleAddStep = () => {
+    isDirty.current = true
     setSteps(prev => [...prev, {
       _id: uid(), title: '', instruction: '', time_min: '', ingredient_names: [],
     }])
   }
 
   const handleChangeStep = (id, updated) => {
+    isDirty.current = true
     setSteps(prev => prev.map(s => s._id === id ? updated : s))
   }
 
   const handleDeleteStep = (id) => {
+    isDirty.current = true
     setSteps(prev => prev.filter(s => s._id !== id))
   }
 
   const handleMoveStep = (index, dir) => {
+    isDirty.current = true
     setSteps(prev => {
       const next = [...prev]
       const target = index + dir
@@ -323,6 +349,7 @@ export default function AdminRecipeEdit() {
       } else {
         await createFullRecipe(payload)
       }
+      isDirty.current = false   // sauvegarde réussie : plus de dirty
       navigate('/admin')
     } catch (e) {
       setError('Erreur : ' + e.message)
@@ -379,7 +406,7 @@ export default function AdminRecipeEdit() {
             <input
               type="text"
               value={form.name}
-              onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+              onChange={e => { isDirty.current = true; setForm(f => ({ ...f, name: e.target.value })) }}
               placeholder="Ex : Poulet cajun au riz"
               style={inputStyle}
               autoFocus
@@ -391,7 +418,7 @@ export default function AdminRecipeEdit() {
             <div style={{ flex: 1 }}>
               <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>Catégorie</label>
               <input type="text" value={form.category}
-                onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
+                onChange={e => { isDirty.current = true; setForm(f => ({ ...f, category: e.target.value })) }}
                 placeholder="Viande, Féculents..."
                 style={inputStyle} />
             </div>
@@ -399,7 +426,7 @@ export default function AdminRecipeEdit() {
             <div style={{ flex: 1 }}>
               <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>Cuisine</label>
               <input type="text" value={form.origin}
-                onChange={e => setForm(f => ({ ...f, origin: e.target.value }))}
+                onChange={e => { isDirty.current = true; setForm(f => ({ ...f, origin: e.target.value })) }}
                 placeholder="Mexicain, Japonais..."
                 style={inputStyle} />
             </div>
@@ -411,7 +438,7 @@ export default function AdminRecipeEdit() {
               <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>Portions de base</label>
               <input
                 type="number" min="1" value={form.base_servings}
-                onChange={e => setForm(f => ({ ...f, base_servings: e.target.value }))}
+                onChange={e => { isDirty.current = true; setForm(f => ({ ...f, base_servings: e.target.value })) }}
                 style={inputStyle}
               />
             </div>
@@ -419,7 +446,7 @@ export default function AdminRecipeEdit() {
             <div>
               <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>Batch cooking</label>
               <button
-                onClick={() => setForm(f => ({ ...f, is_batch: !f.is_batch }))}
+                onClick={() => { isDirty.current = true; setForm(f => ({ ...f, is_batch: !f.is_batch })) }}
                 style={{
                   padding: '10px 16px', borderRadius: '10px', border: 'none', cursor: 'pointer',
                   background: form.is_batch ? 'rgba(76,175,80,0.2)' : 'var(--bg-tertiary)',
@@ -437,7 +464,7 @@ export default function AdminRecipeEdit() {
             <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>Notes</label>
             <textarea
               value={form.notes}
-              onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
+              onChange={e => { isDirty.current = true; setForm(f => ({ ...f, notes: e.target.value })) }}
               placeholder="Notes libres, conseils..."
               rows={3}
               style={{ ...inputStyle, resize: 'vertical' }}

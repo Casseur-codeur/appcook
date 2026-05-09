@@ -17,7 +17,9 @@ export default function FocusMode() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    getRecipe(code).then(r => { setRecipe(r); setLoading(false) })
+    getRecipe(code)
+      .then(r => { setRecipe(r); setLoading(false) })
+      .catch(() => setLoading(false))
   }, [code])
 
   const handleNext = () => {
@@ -32,7 +34,11 @@ export default function FocusMode() {
     if (currentStep > 0) setCurrentStep(s => s - 1)
   }
 
+  const completing = { current: false }
+
   const handleComplete = async () => {
+    if (completing.current) return  // guard double-tap
+    completing.current = true
     await logCook(code).catch(() => {})  // Enregistrement silencieux
     setDone(true)
   }
@@ -43,8 +49,25 @@ export default function FocusMode() {
     </div>
   )
 
+  if (!recipe) return (
+    <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
+      Recette introuvable.
+    </div>
+  )
+
   const steps = recipe.steps
+
+  // Guard : recette sans étapes
+  if (!steps || steps.length === 0) return (
+    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px', textAlign: 'center' }}>
+      <div style={{ fontSize: '3rem', marginBottom: '16px' }}>⚠️</div>
+      <p style={{ color: 'var(--text-muted)', marginBottom: '24px' }}>Cette recette n&#39;a pas d&#39;étapes définies.</p>
+      <button className="btn-secondary" onClick={() => navigate(-1)}>← Retour</button>
+    </div>
+  )
+
   const step = steps[currentStep]
+  const scale = persons / (recipe.base_servings || 1)
 
   // Écran de complétion
   if (done) {
@@ -116,6 +139,7 @@ export default function FocusMode() {
           step={step}
           nextStep={currentStep < steps.length - 1 ? steps[currentStep + 1] : null}
           total={steps.length}
+          scale={scale}
         />
 
         {/* Timer */}

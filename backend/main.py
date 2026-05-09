@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 import db
 
@@ -41,7 +41,7 @@ class RecipeBase(BaseModel):
     name: str
     category: Optional[str] = ""
     origin: Optional[str] = ""
-    base_servings: float = 1.0
+    base_servings: float = Field(default=1.0, ge=0.1)
     is_batch: bool = False
     notes: Optional[str] = ""
 
@@ -68,7 +68,7 @@ class IngredientIn(BaseModel):
 
 class ShoppingRequest(BaseModel):
     recipe_codes: List[str]
-    persons: float = 1.0
+    persons: float = Field(default=1.0, ge=0.1)
     include_optional: bool = False
 
 
@@ -104,7 +104,7 @@ class BundleItemIn(BaseModel):
 
 class GenerateShoppingRequest(BaseModel):
     recipe_codes: Optional[List[str]] = []
-    persons: float = 1.0                            # fallback si recipe_portions absent
+    persons: float = Field(default=1.0, ge=0.1)     # fallback si recipe_portions absent
     recipe_portions: Optional[Dict[str, float]] = {}  # { code: persons } — prioritaire
     bundle_id: Optional[int] = None
     manual_items: Optional[List[Dict[str, Any]]] = []
@@ -143,7 +143,7 @@ class FullRecipeIn(BaseModel):
     name: str
     category: Optional[str] = ""
     origin: Optional[str] = ""
-    base_servings: float = 1.0
+    base_servings: float = Field(default=1.0, ge=0.1)
     is_batch: bool = False
     notes: Optional[str] = ""
     ingredients: Optional[List[FullIngredientIn]] = []
@@ -151,7 +151,7 @@ class FullRecipeIn(BaseModel):
 
 
 class SettingsUpdate(BaseModel):
-    weekly_goal: Optional[int] = None
+    weekly_goal: Optional[int] = Field(default=None, ge=1)
     # Extensible : ajouter d'autres clés ici
 
 
@@ -241,6 +241,23 @@ def delete_recipe(code: str):
             raise HTTPException(status_code=404, detail="Recette introuvable")
         db.delete_recipe_by_code(conn, code)
         return {"ok": True}
+    finally:
+        conn.close()
+
+
+@app.get("/api/recipes/export/all")
+def export_all_recipes():
+    """Export de toutes les recettes en un seul appel (tableau JSON)."""
+    conn = db.get_conn()
+    try:
+        recipes = db.get_all_recipes(conn)
+        result = []
+        for r in recipes:
+            try:
+                result.append(db.export_recipe_to_json_by_code(conn, r["code"]))
+            except Exception:
+                pass  # recette corrompue ignorée
+        return result
     finally:
         conn.close()
 
@@ -352,7 +369,7 @@ def log_cook(code: str):
 
 
 @app.get("/api/history")
-def get_history(limit: int = Query(20)):
+def get_history(limit: int = Query(20, ge=1, le=500)):
     conn = db.get_conn()
     try:
         return db.get_cooking_history(conn, limit=limit)

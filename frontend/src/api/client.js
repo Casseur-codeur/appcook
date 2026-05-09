@@ -30,6 +30,7 @@ export const createFullRecipe = (data) => request('/recipes/full', { method: 'PO
 export const updateFullRecipe = (code, data) => request(`/recipes/${code}/full`, { method: 'PUT', body: JSON.stringify(data) })
 export const deleteRecipe = (code) => request(`/recipes/${code}`, { method: 'DELETE' })
 export const exportRecipe = (code) => request(`/recipes/${code}/export`)
+export const exportAllRecipes = () => request('/recipes/export/all')
 export const importRecipe = (data, onConflict = 'rename') =>
   request('/recipes/import', { method: 'POST', body: JSON.stringify({ data, on_conflict: onConflict }) })
 

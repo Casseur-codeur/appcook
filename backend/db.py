@@ -43,7 +43,16 @@ def table_exists(conn: sqlite3.Connection, table: str) -> bool:
     return row is not None
 
 
+_ALLOWED_TABLES = {
+    "recipes", "steps", "step_ingredients", "recipe_ingredients",
+    "ingredient_catalog", "ingredient_alias", "unit_alias",
+    "cooking_history", "shopping_list", "shopping_list_items",
+    "shopping_bundles", "shopping_bundle_items", "user_settings",
+}
+
 def column_exists(conn: sqlite3.Connection, table: str, column: str) -> bool:
+    if table not in _ALLOWED_TABLES:
+        return False
     if not table_exists(conn, table):
         return False
     rows = conn.execute(f"PRAGMA table_info({table})").fetchall()
@@ -224,6 +233,7 @@ def ensure_shopping_missing_column(conn: sqlite3.Connection) -> None:
 def ensure_schema(conn: sqlite3.Connection) -> None:
     """Point d'entrée unique — idempotent, safe sur DB vide ou existante."""
     conn.execute("PRAGMA foreign_keys = ON;")
+    conn.execute("PRAGMA journal_mode=WAL;")   # meilleure concurrence lecture/écriture
     create_tables_if_needed(conn)
     ensure_catalog_columns(conn)
     ensure_catalog_category(conn)
@@ -820,8 +830,20 @@ def validate_recipe_json(data: Dict[str, Any]) -> Tuple[bool, List[str]]:
         errors.append("recipe.title est obligatoire.")
     if not isinstance(recipe.get("ingredients"), list):
         errors.append("recipe.ingredients doit être une liste.")
+    else:
+        for i, ing in enumerate(recipe["ingredients"]):
+            if not isinstance(ing, dict):
+                errors.append(f"recipe.ingredients[{i}] doit être un objet.")
+            elif not isinstance(ing.get("name"), str) or not ing["name"].strip():
+                errors.append(f"recipe.ingredients[{i}].name est obligatoire.")
     if not isinstance(recipe.get("steps"), list) or len(recipe.get("steps", [])) == 0:
         errors.append("recipe.steps doit être une liste non vide.")
+    else:
+        for i, step in enumerate(recipe["steps"]):
+            if not isinstance(step, dict):
+                errors.append(f"recipe.steps[{i}] doit être un objet.")
+            elif not isinstance(step.get("text"), str) or not step["text"].strip():
+                errors.append(f"recipe.steps[{i}].text est obligatoire.")
     return (len(errors) == 0), errors
 
 

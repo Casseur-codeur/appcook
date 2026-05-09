@@ -26,6 +26,7 @@ export default function Recipes() {
   const [isBatch, setIsBatch] = useState(null)
   const [category, setCategory] = useState(null)
   const [origin, setOrigin] = useState(null)
+  const [search, setSearch] = useState('')
 
   // Charger filtres disponibles + stats
   useEffect(() => {
@@ -51,8 +52,19 @@ export default function Recipes() {
       // Retirer la suggestion de la grille pour éviter le doublon
       setRecipes(suggest ? list.filter(r => r.code !== suggest.code) : list)
       setLoading(false)
-    })
+    }).catch(() => setLoading(false))
   }, [timeMax, isBatch, category, origin])
+
+  // Filtre texte côté client (name + category + origin)
+  const q = search.trim().toLowerCase()
+  const matchesSearch = (r) =>
+    !q ||
+    r.name?.toLowerCase().includes(q) ||
+    r.category?.toLowerCase().includes(q) ||
+    r.origin?.toLowerCase().includes(q)
+
+  const filteredSuggested = suggested && matchesSearch(suggested) ? suggested : null
+  const filteredRecipes = recipes.filter(matchesSearch)
 
   return (
     <div style={{ paddingTop: '16px' }}>
@@ -60,6 +72,20 @@ export default function Recipes() {
       {/* Header */}
       <div style={{ padding: '0 16px 8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ fontSize: '1.3rem', fontWeight: 700 }}>Recettes</div>
+      </div>
+
+      {/* Recherche texte */}
+      <div style={{ padding: '0 16px 8px' }}>
+        <input
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="🔍 Rechercher..."
+          style={{
+            width: '100%', padding: '10px 14px', borderRadius: '12px', border: 'none',
+            background: 'var(--bg-secondary)', color: 'var(--text-primary)',
+            fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box',
+          }}
+        />
       </div>
 
       {/* Bandeau stats hebdo */}
@@ -126,15 +152,15 @@ export default function Recipes() {
         <div style={{ padding: '0 16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
 
           {/* Suggestion en haut */}
-          {suggested && <RecipeCard recipe={suggested} highlighted />}
+          {filteredSuggested && <RecipeCard recipe={filteredSuggested} highlighted />}
 
           {/* Grille */}
-          {recipes.map(r => <RecipeCard key={r.code} recipe={r} />)}
+          {filteredRecipes.map(r => <RecipeCard key={r.code} recipe={r} />)}
 
-          {recipes.length === 0 && !suggested && (
+          {filteredRecipes.length === 0 && !filteredSuggested && (
             <EmptyState
-              title="Aucune recette pour ces filtres"
-              message="Essaie de changer les filtres ou ajoute de nouvelles recettes."
+              title={q ? `Aucun résultat pour "${search}"` : 'Aucune recette pour ces filtres'}
+              message={q ? 'Essaie un autre mot-clé.' : 'Essaie de changer les filtres ou ajoute de nouvelles recettes.'}
             />
           )}
 

@@ -4,8 +4,13 @@
  *         nextStep : étape suivante (pour l'aperçu), peut être null
  *         total    : nombre total d'étapes
  */
-export default function StepCard({ step, nextStep, total }) {
+export default function StepCard({ step, nextStep, total, scale = 1 }) {
   const { step_no, title, instruction, time_min, ingredients } = step
+
+  const formatQty = (qty) => {
+    const scaled = qty * scale
+    return scaled % 1 === 0 ? scaled : scaled.toFixed(1)
+  }
 
   return (
     <div style={{ padding: '16px' }}>
@@ -53,7 +58,7 @@ export default function StepCard({ step, nextStep, total }) {
               borderTop: i > 0 ? '1px solid var(--bg-secondary)' : 'none',
             }}>
               <span>{ing.name}</span>
-              {ing.qty && <span style={{ color: 'var(--text-muted)' }}>{ing.qty} {ing.unit}</span>}
+              {ing.qty && <span style={{ color: 'var(--text-muted)' }}>{formatQty(ing.qty)} {ing.unit}</span>}
             </div>
           ))}
         </div>

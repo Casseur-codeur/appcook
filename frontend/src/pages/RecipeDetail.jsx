@@ -47,7 +47,7 @@ export default function RecipeDetail() {
     </div>
   )
 
-  const scale = persons / recipe.base_servings
+  const scale = persons / (recipe.base_servings || 1)
   const totalTime = recipe.total_time
 
   const timeLabel = totalTime

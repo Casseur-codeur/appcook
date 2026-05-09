@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Component } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import BottomNav from './components/BottomNav'
 import LoadingScreen from './components/LoadingScreen'
@@ -10,6 +10,41 @@ import ShoppingSelect from './pages/ShoppingSelect'
 import ShoppingList from './pages/ShoppingList'
 import Stats from './pages/Stats'
 import Admin from './pages/Admin'
+
+// ─── ErrorBoundary globale ───────────────────────────────────────────────────
+class ErrorBoundary extends Component {
+  constructor(props) {
+    super(props)
+    this.state = { hasError: false }
+  }
+  static getDerivedStateFromError() {
+    return { hasError: true }
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{
+          height: '100vh', display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center',
+          padding: '32px', textAlign: 'center', background: 'var(--bg-primary)',
+        }}>
+          <div style={{ fontSize: '3rem', marginBottom: '16px' }}>💥</div>
+          <h2 style={{ color: 'var(--text-primary)', marginBottom: '8px' }}>Oups, quelque chose a planté</h2>
+          <p style={{ color: 'var(--text-muted)', marginBottom: '24px', fontSize: '0.9rem' }}>
+            Une erreur inattendue s&#39;est produite.
+          </p>
+          <button
+            className="btn-primary"
+            onClick={() => { this.setState({ hasError: false }); window.location.href = '/' }}
+          >
+            Retour à l&#39;accueil
+          </button>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
 
 export default function App() {
   const [appReady, setAppReady] = useState(false)
@@ -23,6 +58,7 @@ export default function App() {
   if (!appReady) return <LoadingScreen />
 
   return (
+    <ErrorBoundary>
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
 
       {/* Zone de contenu principale (scrollable) */}
@@ -44,5 +80,6 @@ export default function App() {
       <BottomNav />
 
     </div>
+    </ErrorBoundary>
   )
 }
