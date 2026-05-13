@@ -27,3 +27,6 @@ Thumbs.db
 
 # Scripts locaux Windows (infos d'infra personnelles)
 *.bat
+
+# Documents de conception personnels (non publics)
+BRIEF.md
