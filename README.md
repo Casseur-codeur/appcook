@@ -5,6 +5,23 @@ Stack : React + Vite (frontend) · FastAPI + SQLite (backend) · Docker · nginx
 
 ---
 
+## Wiki du projet
+
+Un wiki de projet est maintenant disponible dans [`wiki/`](wiki/Home.md).
+
+Pages principales :
+
+- [Home](wiki/Home.md)
+- [Demarrage rapide](wiki/Getting-Started.md)
+- [Deploiement](wiki/Deployment.md)
+- [Architecture](wiki/Architecture.md)
+- [API backend](wiki/API.md)
+- [Modele de donnees](wiki/Data-Model.md)
+
+Le wiki sert d'index de documentation et de base pour une future GitHub Wiki si tu veux l'exposer cote repository. Pour afficher l'onglet GitHub Wiki natif, il faudra aussi activer la fonctionnalite Wiki dans les settings du depot.
+
+---
+
 ## Déploiement Docker
 
 ### Prérequis
