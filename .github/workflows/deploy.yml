@@ -1,0 +1,74 @@
+name: Deploy Production
+
+on:
+  workflow_run:
+    workflows:
+      - Publish Docker Images
+    types:
+      - completed
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: Docker tag to deploy
+        required: false
+        default: latest
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: >-
+      ${{
+        github.event_name == 'workflow_dispatch' ||
+        github.event.workflow_run.conclusion == 'success'
+      }}
+    runs-on: ubuntu-latest
+    env:
+      DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+      GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
+      GHCR_PULL_TOKEN: ${{ secrets.GHCR_PULL_TOKEN }}
+      APPCOOK_ADMIN_TOKEN: ${{ secrets.APPCOOK_ADMIN_TOKEN }}
+      APPCOOK_ALLOWED_ORIGINS: ${{ secrets.APPCOOK_ALLOWED_ORIGINS }}
+      IMAGE_NAMESPACE: ${{ github.repository_owner }}
+      IMAGE_TAG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.image_tag || 'latest' }}
+
+    steps:
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: ${{ secrets.DEPLOY_PORT || 22 }}
+          envs: DEPLOY_PATH,GHCR_USERNAME,GHCR_PULL_TOKEN,APPCOOK_ADMIN_TOKEN,APPCOOK_ALLOWED_ORIGINS,IMAGE_NAMESPACE,IMAGE_TAG
+          script_stop: true
+          script: |
+            set -eu
+            cd "$DEPLOY_PATH"
+
+            umask 077
+            : > .env
+            printf 'IMAGE_NAMESPACE=%s\n' "$IMAGE_NAMESPACE" >> .env
+            printf 'IMAGE_TAG=%s\n' "$IMAGE_TAG" >> .env
+
+            if [ -n "${APPCOOK_ADMIN_TOKEN:-}" ]; then
+              printf 'APPCOOK_ADMIN_TOKEN=%s\n' "$APPCOOK_ADMIN_TOKEN" >> .env
+            fi
+
+            if [ -n "${APPCOOK_ALLOWED_ORIGINS:-}" ]; then
+              printf 'APPCOOK_ALLOWED_ORIGINS=%s\n' "$APPCOOK_ALLOWED_ORIGINS" >> .env
+            fi
+
+            if [ -n "${GHCR_USERNAME:-}" ] && [ -n "${GHCR_PULL_TOKEN:-}" ]; then
+              printf '%s' "$GHCR_PULL_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
+            fi
+
+            docker compose pull
+            docker compose up -d

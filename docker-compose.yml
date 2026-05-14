@@ -1,15 +1,17 @@
 services:
   api:
-    build: ./backend
+    image: ${IMAGE_REGISTRY:-ghcr.io}/${IMAGE_NAMESPACE:-julienlambs}/appcook-api:${IMAGE_TAG:-latest}
     container_name: appcook_api
     volumes:
       - /volume1/docker/appcook/data:/data
     environment:
       - APPCOOK_DB_FILE=/data/recettes.db
+      - APPCOOK_ADMIN_TOKEN=${APPCOOK_ADMIN_TOKEN:-}
+      - APPCOOK_ALLOWED_ORIGINS=${APPCOOK_ALLOWED_ORIGINS:-}
     restart: unless-stopped
 
   frontend:
-    build: ./frontend
+    image: ${IMAGE_REGISTRY:-ghcr.io}/${IMAGE_NAMESPACE:-julienlambs}/appcook-frontend:${IMAGE_TAG:-latest}
     container_name: appcook_frontend
     ports:
       - "8082:80"
