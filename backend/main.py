@@ -41,6 +41,10 @@ def _parse_allowed_origins() -> List[str]:
         "http://127.0.0.1:5173",
         "http://localhost:4173",
         "http://127.0.0.1:4173",
+        "https://localhost:443",
+        "https://127.0.0.1:443",
+        "https://localhost:8443",
+        "https://127.0.0.1:8443",
     ]
 
 

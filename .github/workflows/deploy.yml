@@ -36,6 +36,14 @@ jobs:
       GHCR_PULL_TOKEN: ${{ secrets.GHCR_PULL_TOKEN }}
       APPCOOK_ADMIN_TOKEN: ${{ secrets.APPCOOK_ADMIN_TOKEN }}
       APPCOOK_ALLOWED_ORIGINS: ${{ secrets.APPCOOK_ALLOWED_ORIGINS }}
+      APPCOOK_HTTPS_MODE: ${{ secrets.APPCOOK_HTTPS_MODE }}
+      APPCOOK_HTTP_PORT: ${{ secrets.APPCOOK_HTTP_PORT }}
+      APPCOOK_HTTPS_PORT: ${{ secrets.APPCOOK_HTTPS_PORT }}
+      APPCOOK_HTTPS_REDIRECT_PORT: ${{ secrets.APPCOOK_HTTPS_REDIRECT_PORT }}
+      APPCOOK_TLS_CERT_DIR: ${{ secrets.APPCOOK_TLS_CERT_DIR }}
+      APPCOOK_TLS_CERT_PATH: ${{ secrets.APPCOOK_TLS_CERT_PATH }}
+      APPCOOK_TLS_KEY_PATH: ${{ secrets.APPCOOK_TLS_KEY_PATH }}
+      APPCOOK_TLS_SERVER_NAME: ${{ secrets.APPCOOK_TLS_SERVER_NAME }}
       IMAGE_NAMESPACE: ${{ github.repository_owner }}
       IMAGE_TAG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.image_tag || 'latest' }}
 
@@ -47,7 +55,7 @@ jobs:
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           port: ${{ secrets.DEPLOY_PORT || 22 }}
-          envs: DEPLOY_PATH,GHCR_USERNAME,GHCR_PULL_TOKEN,APPCOOK_ADMIN_TOKEN,APPCOOK_ALLOWED_ORIGINS,IMAGE_NAMESPACE,IMAGE_TAG
+          envs: DEPLOY_PATH,GHCR_USERNAME,GHCR_PULL_TOKEN,APPCOOK_ADMIN_TOKEN,APPCOOK_ALLOWED_ORIGINS,APPCOOK_HTTPS_MODE,APPCOOK_HTTP_PORT,APPCOOK_HTTPS_PORT,APPCOOK_HTTPS_REDIRECT_PORT,APPCOOK_TLS_CERT_DIR,APPCOOK_TLS_CERT_PATH,APPCOOK_TLS_KEY_PATH,APPCOOK_TLS_SERVER_NAME,IMAGE_NAMESPACE,IMAGE_TAG
           script_stop: true
           script: |
             set -eu
@@ -64,6 +72,38 @@ jobs:
 
             if [ -n "${APPCOOK_ALLOWED_ORIGINS:-}" ]; then
               printf 'APPCOOK_ALLOWED_ORIGINS=%s\n' "$APPCOOK_ALLOWED_ORIGINS" >> .env
+            fi
+
+            if [ -n "${APPCOOK_HTTPS_MODE:-}" ]; then
+              printf 'APPCOOK_HTTPS_MODE=%s\n' "$APPCOOK_HTTPS_MODE" >> .env
+            fi
+
+            if [ -n "${APPCOOK_HTTP_PORT:-}" ]; then
+              printf 'APPCOOK_HTTP_PORT=%s\n' "$APPCOOK_HTTP_PORT" >> .env
+            fi
+
+            if [ -n "${APPCOOK_HTTPS_PORT:-}" ]; then
+              printf 'APPCOOK_HTTPS_PORT=%s\n' "$APPCOOK_HTTPS_PORT" >> .env
+            fi
+
+            if [ -n "${APPCOOK_HTTPS_REDIRECT_PORT:-}" ]; then
+              printf 'APPCOOK_HTTPS_REDIRECT_PORT=%s\n' "$APPCOOK_HTTPS_REDIRECT_PORT" >> .env
+            fi
+
+            if [ -n "${APPCOOK_TLS_CERT_DIR:-}" ]; then
+              printf 'APPCOOK_TLS_CERT_DIR=%s\n' "$APPCOOK_TLS_CERT_DIR" >> .env
+            fi
+
+            if [ -n "${APPCOOK_TLS_CERT_PATH:-}" ]; then
+              printf 'APPCOOK_TLS_CERT_PATH=%s\n' "$APPCOOK_TLS_CERT_PATH" >> .env
+            fi
+
+            if [ -n "${APPCOOK_TLS_KEY_PATH:-}" ]; then
+              printf 'APPCOOK_TLS_KEY_PATH=%s\n' "$APPCOOK_TLS_KEY_PATH" >> .env
+            fi
+
+            if [ -n "${APPCOOK_TLS_SERVER_NAME:-}" ]; then
+              printf 'APPCOOK_TLS_SERVER_NAME=%s\n' "$APPCOOK_TLS_SERVER_NAME" >> .env
             fi
 
             if [ -n "${GHCR_USERNAME:-}" ] && [ -n "${GHCR_PULL_TOKEN:-}" ]; then

@@ -17,6 +17,10 @@ venv/
 # Logs
 *.log
 
+# TLS certs mounted into Docker
+deploy/certs/*
+!deploy/certs/.gitkeep
+
 # OS
 .DS_Store
 Thumbs.db
@@ -34,4 +38,3 @@ BRIEF.md
 # Temp Word Files
 ~*.docx
 ~lock.*.docx
-

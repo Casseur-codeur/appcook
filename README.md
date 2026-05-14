@@ -24,7 +24,58 @@ docker compose pull
 docker compose up -d
 ```
 
-L'app est disponible sur **http://localhost:8082**
+Par défaut, l'app est disponible sur :
+
+- **http://localhost:8082** si aucun certificat TLS n'est monté
+- **https://localhost:8443** si des certificats sont présents dans `deploy/certs/`
+
+En mode HTTPS, nginx redirige automatiquement HTTP vers HTTPS.
+
+### Activer et forcer HTTPS
+
+Le container frontend sait maintenant servir :
+
+- HTTP simple en mode `APPCOOK_HTTPS_MODE=off`
+- HTTP simple automatiquement si aucun certificat n'est trouvé en mode `APPCOOK_HTTPS_MODE=auto`
+- HTTPS + redirection HTTP -> HTTPS en mode `APPCOOK_HTTPS_MODE=redirect`
+
+Par défaut, Compose monte le dossier local suivant dans le container :
+
+```bash
+./deploy/certs
+```
+
+Le plus simple est d'y placer :
+
+```bash
+deploy/certs/fullchain.pem
+deploy/certs/privkey.pem
+```
+
+Puis de lancer :
+
+```bash
+export APPCOOK_HTTPS_MODE=redirect
+docker compose up -d
+```
+
+Si tu veux utiliser les ports standards en production :
+
+```bash
+export APPCOOK_HTTP_PORT=80
+export APPCOOK_HTTPS_PORT=443
+export APPCOOK_HTTPS_REDIRECT_PORT=443
+export APPCOOK_HTTPS_MODE=redirect
+docker compose up -d
+```
+
+Tu peux aussi monter un autre répertoire de certificats :
+
+```bash
+export APPCOOK_TLS_CERT_DIR=/volume1/docker/appcook/certs
+export APPCOOK_HTTPS_MODE=redirect
+docker compose up -d
+```
 
 ### Configuration sécurité recommandée
 
@@ -56,6 +107,7 @@ docker compose up -d
 
 - `APPCOOK_ADMIN_TOKEN` remplace le secret auto-généré si tu veux un secret imposé par l'infra.
 - `APPCOOK_ALLOWED_ORIGINS` limite les appels cross-origin. En production derrière nginx sur le même domaine, tu peux souvent le laisser vide.
+- `APPCOOK_HTTPS_MODE=redirect` force HTTPS si `fullchain.pem` et `privkey.pem` sont disponibles.
 
 ### 3. Peupler la base de données
 
@@ -134,6 +186,14 @@ Si `APPCOOK_ADMIN_TOKEN` n'est pas fourni en prod, AppCook générera aussi un t
 - `IMAGE_NAMESPACE` : permet de changer le namespace GHCR si besoin
 - `APPCOOK_ADMIN_TOKEN` : override optionnel du token auto-généré
 - `APPCOOK_ALLOWED_ORIGINS` : origines frontend autorisées si tu sers l'API derrière un autre domaine
+- `APPCOOK_HTTPS_MODE` : `auto`, `off` ou `redirect`
+- `APPCOOK_HTTP_PORT` : port HTTP publié par Docker, `8082` par défaut
+- `APPCOOK_HTTPS_PORT` : port HTTPS publié par Docker, `8443` par défaut
+- `APPCOOK_HTTPS_REDIRECT_PORT` : port cible utilisé dans la redirection HTTP -> HTTPS
+- `APPCOOK_TLS_CERT_DIR` : dossier monté dans le container contenant les certificats
+- `APPCOOK_TLS_CERT_PATH` : chemin du certificat dans le container, `fullchain.pem` par défaut
+- `APPCOOK_TLS_KEY_PATH` : chemin de la clé privée dans le container, `privkey.pem` par défaut
+- `APPCOOK_TLS_SERVER_NAME` : `server_name` nginx si tu veux le restreindre à un domaine précis
 
 Si le package GHCR est privé, il faut aussi faire un `docker login ghcr.io` sur le serveur avant le premier `pull`.
 
@@ -152,6 +212,10 @@ Secrets GitHub Actions à configurer :
 - `DEPLOY_PATH` : chemin du repo sur le serveur, par exemple `/volume1/docker/appcook`
 - `APPCOOK_ADMIN_TOKEN` : optionnel, pour imposer un token au lieu du token auto-généré
 - `APPCOOK_ALLOWED_ORIGINS` : optionnel
+- `APPCOOK_HTTPS_MODE` : optionnel, mais recommandé à `redirect` en production
+- `APPCOOK_HTTP_PORT` / `APPCOOK_HTTPS_PORT` / `APPCOOK_HTTPS_REDIRECT_PORT` : optionnels
+- `APPCOOK_TLS_CERT_DIR` : optionnel si tu utilises `./deploy/certs`, sinon à renseigner
+- `APPCOOK_TLS_CERT_PATH` / `APPCOOK_TLS_KEY_PATH` / `APPCOOK_TLS_SERVER_NAME` : optionnels
 - `GHCR_USERNAME` : optionnel si les images GHCR sont publiques
 - `GHCR_PULL_TOKEN` : optionnel si les images GHCR sont publiques
 - `DEPLOY_PORT` : optionnel, sinon port `22`
@@ -162,6 +226,12 @@ Le workflow écrit un fichier `.env` sur le serveur avec les variables runtime, 
 docker compose pull
 docker compose up -d
 ```
+
+Pour une PWA installable sur mobile hors localhost, HTTPS est nécessaire. La configuration ci-dessus permet donc d'avoir à la fois :
+
+- redirection automatique vers HTTPS
+- en-tête HSTS
+- API servie derrière le même domaine en HTTPS
 
 ---
 

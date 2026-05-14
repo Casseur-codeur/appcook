@@ -4,14 +4,14 @@
 
 ```
 [Téléphone / navigateur]
-        │  HTTP (PWA installée)
+        │  HTTPS
         ▼
 [NAS Synology]
    ┌──────────────────────────────┐
    │  Docker Compose              │
    │                              │
    │  ┌─────────────┐             │
-   │  │  Nginx      │ :80         │
+   │  │  Nginx      │ :80 / :443  │
    │  │  (React SPA)│             │
    │  └──────┬──────┘             │
    │         │ /api/*  proxy      │
@@ -161,12 +161,13 @@ services:
     container_name: appcook_frontend
     ports:
       - "80:80"
+      - "443:443"
     depends_on:
       - api
     restart: unless-stopped
 ```
 
-Nginx dans le container frontend proxyfie `/api/*` vers le service `api:8000`.
+Nginx dans le container frontend peut servir en HTTP simple ou en HTTPS avec redirection automatique HTTP -> HTTPS selon `APPCOOK_HTTPS_MODE`. Il proxyfie `/api/*` vers le service `api:8000` en transmettant aussi les en-têtes `X-Forwarded-*`.
 
 ---
 
