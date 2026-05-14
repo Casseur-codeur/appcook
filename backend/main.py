@@ -1,10 +1,13 @@
 """
 AppCook — API FastAPI v2
 """
+import os
+import secrets
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -20,16 +23,100 @@ async def lifespan(app: FastAPI):
     conn = db.get_conn()
     db.ensure_schema(conn)
     conn.close()
+    _get_admin_token()
     yield
+
+
+ADMIN_TOKEN_ENV = "APPCOOK_ADMIN_TOKEN"
+ADMIN_TOKEN_FILENAME = "admin_token.txt"
+
+
+def _parse_allowed_origins() -> List[str]:
+    raw = os.environ.get("APPCOOK_ALLOWED_ORIGINS", "")
+    origins = [origin.strip() for origin in raw.split(",") if origin.strip()]
+    if origins:
+        return origins
+    return [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:4173",
+        "http://127.0.0.1:4173",
+        "https://localhost:443",
+        "https://127.0.0.1:443",
+        "https://localhost:8443",
+        "https://127.0.0.1:8443",
+    ]
+
+
+def _get_admin_token() -> Optional[str]:
+    token = os.environ.get(ADMIN_TOKEN_ENV, "").strip()
+    if token:
+        return token
+    return _get_or_create_persisted_admin_token()
+
+
+def _get_admin_token_path() -> Path:
+    return Path(db.DB_FILE).resolve().parent / ADMIN_TOKEN_FILENAME
+
+
+def _read_admin_token_file(path: Path) -> Optional[str]:
+    if not path.exists():
+        return None
+    token = path.read_text(encoding="utf-8").strip()
+    return token or None
+
+
+def _create_admin_token_file(path: Path, token: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd = os.open(str(path), os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    with os.fdopen(fd, "w", encoding="utf-8") as handle:
+        handle.write(token)
+        handle.write("\n")
+
+
+def _get_or_create_persisted_admin_token() -> str:
+    path = _get_admin_token_path()
+    existing = _read_admin_token_file(path)
+    if existing:
+        return existing
+
+    generated = secrets.token_urlsafe(32)
+    try:
+        _create_admin_token_file(path, generated)
+        print(f"AppCook admin token generated at: {path}")
+        return generated
+    except FileExistsError:
+        existing = _read_admin_token_file(path)
+        if existing:
+            return existing
+        raise RuntimeError(f"Le fichier de token admin existe mais est vide: {path}")
+    except OSError as exc:
+        raise RuntimeError(
+            f"Impossible de créer le token admin persistant dans {path}: {exc}"
+        ) from exc
+
+
+def require_admin_token(request: Request) -> None:
+    try:
+        expected_token = _get_admin_token()
+    except RuntimeError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=str(exc),
+        )
+
+    provided_token = request.headers.get("X-AppCook-Admin-Token", "").strip()
+    if not provided_token or not secrets.compare_digest(provided_token, expected_token):
+        raise HTTPException(status_code=401, detail="Authentification admin requise.")
 
 
 app = FastAPI(title="AppCook API", version="2.0.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=_parse_allowed_origins(),
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "X-AppCook-Admin-Token"],
 )
 
 
@@ -156,6 +243,15 @@ class SettingsUpdate(BaseModel):
 
 
 # =============================================================================
+# Routes — Auth admin
+# =============================================================================
+
+@app.get("/api/auth/admin")
+def verify_admin_access(_: None = Depends(require_admin_token)):
+    return {"ok": True}
+
+
+# =============================================================================
 # Routes — Recettes
 # =============================================================================
 
@@ -202,7 +298,7 @@ def get_recipe(code: str):
 
 
 @app.post("/api/recipes", status_code=201)
-def create_recipe(payload: RecipeIn):
+def create_recipe(payload: RecipeIn, _: None = Depends(require_admin_token)):
     conn = db.get_conn()
     try:
         base_code = db._slugify_code(payload.name)
@@ -220,7 +316,7 @@ def create_recipe(payload: RecipeIn):
 
 
 @app.put("/api/recipes/{code}")
-def update_recipe(code: str, payload: RecipeBase):
+def update_recipe(code: str, payload: RecipeBase, _: None = Depends(require_admin_token)):
     conn = db.get_conn()
     try:
         if db.get_recipe_id_by_code(conn, code) is None:
@@ -234,7 +330,7 @@ def update_recipe(code: str, payload: RecipeBase):
 
 
 @app.delete("/api/recipes/{code}")
-def delete_recipe(code: str):
+def delete_recipe(code: str, _: None = Depends(require_admin_token)):
     conn = db.get_conn()
     try:
         if db.get_recipe_id_by_code(conn, code) is None:
@@ -246,7 +342,7 @@ def delete_recipe(code: str):
 
 
 @app.get("/api/recipes/{code}/export")
-def export_recipe(code: str):
+def export_recipe(code: str, _: None = Depends(require_admin_token)):
     conn = db.get_conn()
     try:
         return db.export_recipe_to_json_by_code(conn, code)
@@ -257,7 +353,7 @@ def export_recipe(code: str):
 
 
 @app.post("/api/recipes/full", status_code=201)
-def create_full_recipe(payload: FullRecipeIn):
+def create_full_recipe(payload: FullRecipeIn, _: None = Depends(require_admin_token)):
     """Crée une recette complète avec ingrédients et étapes en une seule requête."""
     conn = db.get_conn()
     try:
@@ -279,7 +375,7 @@ def create_full_recipe(payload: FullRecipeIn):
 
 
 @app.put("/api/recipes/{code}/full")
-def update_full_recipe(code: str, payload: FullRecipeIn):
+def update_full_recipe(code: str, payload: FullRecipeIn, _: None = Depends(require_admin_token)):
     """Remplace entièrement une recette (métadonnées + ingrédients + étapes)."""
     conn = db.get_conn()
     try:
@@ -298,7 +394,7 @@ def update_full_recipe(code: str, payload: FullRecipeIn):
 
 
 @app.post("/api/recipes/import", status_code=201)
-def import_recipe(payload: ImportRequest):
+def import_recipe(payload: ImportRequest, _: None = Depends(require_admin_token)):
     try:
         recipe_id = db.import_recipe_from_json(payload.data, on_code_conflict=payload.on_conflict)
         return {"recipe_id": recipe_id}
@@ -410,7 +506,7 @@ def list_catalog():
 
 
 @app.put("/api/catalog/{ingredient_id}")
-def update_catalog(ingredient_id: int, payload: CatalogUpdate):
+def update_catalog(ingredient_id: int, payload: CatalogUpdate, _: None = Depends(require_admin_token)):
     conn = db.get_conn()
     try:
         if payload.default_unit is not None:
@@ -425,7 +521,7 @@ def update_catalog(ingredient_id: int, payload: CatalogUpdate):
 
 
 @app.post("/api/catalog/merge")
-def merge_catalog(payload: MergeRequest):
+def merge_catalog(payload: MergeRequest, _: None = Depends(require_admin_token)):
     conn = db.get_conn()
     try:
         merged = db.merge_ingredients(conn, payload.canonical_id, payload.duplicate_ids)
@@ -448,7 +544,7 @@ def list_bundles():
 
 
 @app.post("/api/bundles", status_code=201)
-def create_bundle(payload: BundleIn):
+def create_bundle(payload: BundleIn, _: None = Depends(require_admin_token)):
     conn = db.get_conn()
     try:
         bid = db.create_bundle(conn, payload.name, payload.icon or "🛒", payload.position)
@@ -458,7 +554,7 @@ def create_bundle(payload: BundleIn):
 
 
 @app.put("/api/bundles/{bundle_id}")
-def update_bundle(bundle_id: int, payload: BundleIn):
+def update_bundle(bundle_id: int, payload: BundleIn, _: None = Depends(require_admin_token)):
     conn = db.get_conn()
     try:
         db.update_bundle(conn, bundle_id, payload.name, payload.icon or "🛒")
@@ -468,7 +564,7 @@ def update_bundle(bundle_id: int, payload: BundleIn):
 
 
 @app.delete("/api/bundles/{bundle_id}")
-def delete_bundle(bundle_id: int):
+def delete_bundle(bundle_id: int, _: None = Depends(require_admin_token)):
     conn = db.get_conn()
     try:
         db.delete_bundle(conn, bundle_id)
@@ -478,7 +574,7 @@ def delete_bundle(bundle_id: int):
 
 
 @app.post("/api/bundles/{bundle_id}/items", status_code=201)
-def add_bundle_item(bundle_id: int, payload: BundleItemIn):
+def add_bundle_item(bundle_id: int, payload: BundleItemIn, _: None = Depends(require_admin_token)):
     conn = db.get_conn()
     try:
         item_id = db.add_bundle_item(
@@ -491,7 +587,7 @@ def add_bundle_item(bundle_id: int, payload: BundleItemIn):
 
 
 @app.put("/api/bundles/{bundle_id}/items/{item_id}")
-def update_bundle_item(bundle_id: int, item_id: int, payload: BundleItemIn):
+def update_bundle_item(bundle_id: int, item_id: int, payload: BundleItemIn, _: None = Depends(require_admin_token)):
     conn = db.get_conn()
     try:
         db.update_bundle_item(
@@ -504,7 +600,7 @@ def update_bundle_item(bundle_id: int, item_id: int, payload: BundleItemIn):
 
 
 @app.delete("/api/bundles/{bundle_id}/items/{item_id}")
-def delete_bundle_item(bundle_id: int, item_id: int):
+def delete_bundle_item(bundle_id: int, item_id: int, _: None = Depends(require_admin_token)):
     conn = db.get_conn()
     try:
         db.delete_bundle_item(conn, item_id)

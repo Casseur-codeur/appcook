@@ -1,16 +1,61 @@
 const BASE = '/api'
+const ADMIN_TOKEN_KEY = 'appcook_admin_token'
+
+const getSessionStorage = () => (
+  typeof window === 'undefined' ? null : window.sessionStorage
+)
+
+const notifyAdminAuthChanged = () => {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event('appcook-admin-auth-changed'))
+  }
+}
+
+export const getAdminToken = () => getSessionStorage()?.getItem(ADMIN_TOKEN_KEY) || ''
+
+export const hasAdminToken = () => !!getAdminToken()
+
+export const setAdminToken = (token) => {
+  const value = (token || '').trim()
+  const storage = getSessionStorage()
+  if (!storage) return
+  if (value) {
+    storage.setItem(ADMIN_TOKEN_KEY, value)
+  } else {
+    storage.removeItem(ADMIN_TOKEN_KEY)
+  }
+  notifyAdminAuthChanged()
+}
+
+export const clearAdminToken = () => {
+  const storage = getSessionStorage()
+  if (!storage) return
+  storage.removeItem(ADMIN_TOKEN_KEY)
+  notifyAdminAuthChanged()
+}
 
 async function request(path, options = {}) {
+  const token = getAdminToken()
+  const headers = {
+    'Content-Type': 'application/json',
+    ...(token ? { 'X-AppCook-Admin-Token': token } : {}),
+    ...(options.headers || {}),
+  }
   const res = await fetch(`${BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json' },
     ...options,
+    headers,
   })
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: res.statusText }))
+    if ((res.status === 401 || res.status === 403) && token) {
+      clearAdminToken()
+    }
     throw new Error(err.detail || `Erreur ${res.status}`)
   }
   return res.json()
 }
+
+export const verifyAdminAccess = () => request('/auth/admin')
 
 // --- Recettes ---
 export const getRecipes = (params = {}) => {
