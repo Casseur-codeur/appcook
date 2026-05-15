@@ -31,10 +31,11 @@ case "$mode" in
     auto)
         if has_tls_material; then
             render_template /etc/nginx/templates/nginx.https.conf.template
+            rm -f /etc/nginx/conf.d/nginx.https.conf /etc/nginx/conf.d/nginx.http.conf
             echo "AppCook frontend: HTTPS enabled in auto mode." >&2
         else
             render_template /etc/nginx/templates/nginx.http.conf.template
-            rm -f /etc/nginx/conf.d/nginx.https.conf
+            rm -f /etc/nginx/conf.d/nginx.https.conf /etc/nginx/conf.d/nginx.http.conf
             echo "AppCook frontend: TLS files not found, serving HTTP only in auto mode." >&2
         fi
         ;;
@@ -44,11 +45,12 @@ case "$mode" in
             exit 1
         fi
         render_template /etc/nginx/templates/nginx.https.conf.template
+        rm -f /etc/nginx/conf.d/nginx.https.conf /etc/nginx/conf.d/nginx.http.conf
         echo "AppCook frontend: HTTPS enforced." >&2
         ;;
     off|http-only|disabled)
         render_template /etc/nginx/templates/nginx.http.conf.template
-        rm -f /etc/nginx/conf.d/nginx.https.conf
+        rm -f /etc/nginx/conf.d/nginx.https.conf /etc/nginx/conf.d/nginx.http.conf
         echo "AppCook frontend: HTTPS disabled, serving HTTP only." >&2
         ;;
     *)
