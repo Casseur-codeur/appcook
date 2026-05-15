@@ -35,6 +35,9 @@ Thumbs.db
 # Documents de conception personnels (non publics)
 BRIEF.md
 
+# Instructions Claude Code (infos d'infra personnelles)
+CLAUDE.md
+
 # Temp Word Files
 ~*.docx
 ~lock.*.docx
