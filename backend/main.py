@@ -164,6 +164,12 @@ class CatalogUpdate(BaseModel):
     show_qty_in_list: Optional[bool] = None
     category: Optional[str] = None
 
+class CatalogItemIn(BaseModel):
+    name: str
+    default_unit: str = ''
+    category: str = ''
+    show_qty_in_list: int = 1
+
 
 class MergeRequest(BaseModel):
     canonical_id: int
@@ -501,6 +507,20 @@ def list_catalog():
              "show_qty_in_list": bool(r[3]), "norm_name": r[4], "category": r[5]}
             for r in rows
         ]
+    finally:
+        conn.close()
+
+
+@app.post("/api/catalog")
+def create_catalog_item(item: CatalogItemIn, _: None = Depends(require_admin_token)):
+    conn = db.get_conn()
+    try:
+        new_id = db.insert_catalog_ingredient(
+            conn, item.name, item.default_unit, item.category, item.show_qty_in_list
+        )
+        return {"id": new_id, "name": item.name}
+    except ValueError as e:
+        raise HTTPException(status_code=409, detail=str(e))
     finally:
         conn.close()
 

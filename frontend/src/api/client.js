@@ -138,3 +138,5 @@ export const updateCatalogItem = (id, data) =>
   request(`/catalog/${id}`, { method: 'PUT', body: JSON.stringify(data) })
 export const mergeCatalogItems = (canonicalId, duplicateIds) =>
   request('/catalog/merge', { method: 'POST', body: JSON.stringify({ canonical_id: canonicalId, duplicate_ids: duplicateIds }) })
+export const addCatalogItem = (data) =>
+  request('/catalog', { method: 'POST', body: JSON.stringify(data) })

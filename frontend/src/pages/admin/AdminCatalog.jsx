@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { getCatalog, updateCatalogItem, mergeCatalogItems } from '../../api/client'
+import { getCatalog, updateCatalogItem, mergeCatalogItems, addCatalogItem } from '../../api/client'
 
 const UNITS = ['', 'g', 'kg', 'ml', 'cl', 'l', 'pièce', 'gousse', 'tranche', 'cube', 'pincée', 'cs', 'cc']
 const CATEGORIES = ['', 'Épicerie', 'Frais', 'Boucherie', 'Fruits & Légumes', 'Surgelés', 'Boissons', 'Hygiène', 'Divers']
@@ -180,6 +180,8 @@ function CatalogRow({ item, mergeMode, selected, onSelect, onSaved }) {
   )
 }
 
+const EMPTY_FORM = { name: '', default_unit: '', category: '', show_qty_in_list: 1 }
+
 // ─── Composant principal ──────────────────────────────────────────────────────
 export default function AdminCatalog() {
   const [items, setItems]           = useState([])
@@ -189,6 +191,10 @@ export default function AdminCatalog() {
   const [canonical, setCanonical]   = useState(null) // ID de référence
   const [merging, setMerging]       = useState(false)
   const [filterNoUnit, setFilterNoUnit] = useState(false)
+  const [showAddModal, setShowAddModal] = useState(false)
+  const [addForm, setAddForm]           = useState(EMPTY_FORM)
+  const [addError, setAddError]         = useState('')
+  const [adding, setAdding]             = useState(false)
 
   useEffect(() => { getCatalog().then(setItems) }, [])
 
@@ -230,6 +236,25 @@ export default function AdminCatalog() {
 
   const noUnitCount = items.filter(i => !i.default_unit).length
 
+  const openAddModal = () => { setAddForm(EMPTY_FORM); setAddError(''); setShowAddModal(true) }
+  const closeAddModal = () => { setShowAddModal(false); setAddError('') }
+
+  const doAdd = async () => {
+    if (!addForm.name.trim()) { setAddError('Le nom est obligatoire'); return }
+    setAdding(true)
+    setAddError('')
+    try {
+      await addCatalogItem(addForm)
+      const fresh = await getCatalog()
+      setItems(fresh)
+      closeAddModal()
+    } catch (e) {
+      setAddError(e.message)
+    } finally {
+      setAdding(false)
+    }
+  }
+
   return (
     <div style={{ padding: '16px', paddingBottom: 100 }}>
 
@@ -238,18 +263,156 @@ export default function AdminCatalog() {
         <h2 style={{ margin: 0, fontSize: '1.1rem' }}>
           Catalogue · <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>{items.length} ingrédients</span>
         </h2>
-        <button
-          onClick={() => { setMergeMode(!mergeMode); setSelected([]); setCanonical(null) }}
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button
+            onClick={openAddModal}
+            style={{
+              background: 'var(--accent)', border: 'none', borderRadius: '8px', padding: '7px 13px',
+              color: '#fff', fontSize: '0.8rem', cursor: 'pointer',
+            }}
+          >
+            + Ajouter
+          </button>
+          <button
+            onClick={() => { setMergeMode(!mergeMode); setSelected([]); setCanonical(null) }}
+            style={{
+              background: mergeMode ? 'var(--accent)' : 'var(--bg-tertiary)',
+              border: 'none', borderRadius: '8px', padding: '7px 13px',
+              color: mergeMode ? '#fff' : 'var(--text-muted)',
+              fontSize: '0.8rem', cursor: 'pointer',
+            }}
+          >
+            {mergeMode ? '✕ Annuler fusion' : '🔀 Fusionner'}
+          </button>
+        </div>
+      </div>
+
+      {/* Modale ajout ingrédient */}
+      {showAddModal && (
+        <div
+          onClick={closeAddModal}
           style={{
-            background: mergeMode ? 'var(--accent)' : 'var(--bg-tertiary)',
-            border: 'none', borderRadius: '8px', padding: '7px 13px',
-            color: mergeMode ? '#fff' : 'var(--text-muted)',
-            fontSize: '0.8rem', cursor: 'pointer',
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 1000, padding: '16px',
           }}
         >
-          {mergeMode ? '✕ Annuler fusion' : '🔀 Fusionner'}
-        </button>
-      </div>
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: 'var(--bg-secondary)', borderRadius: '16px', padding: '24px',
+              width: '100%', maxWidth: '400px',
+            }}
+          >
+            <h3 style={{ margin: '0 0 16px', fontSize: '1rem' }}>Nouvel ingrédient</h3>
+
+            {/* Nom */}
+            <div style={{ marginBottom: '12px' }}>
+              <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>
+                Nom <span style={{ color: 'var(--accent)' }}>*</span>
+              </label>
+              <input
+                type="text"
+                value={addForm.name}
+                onChange={e => setAddForm(f => ({ ...f, name: e.target.value }))}
+                onKeyDown={e => e.key === 'Enter' && doAdd()}
+                placeholder="ex: Farine de blé"
+                autoFocus
+                style={{
+                  width: '100%', boxSizing: 'border-box',
+                  background: 'var(--bg-tertiary)', border: 'none', borderRadius: '8px',
+                  padding: '8px 12px', color: 'var(--text-primary)', fontSize: '0.9rem', outline: 'none',
+                }}
+              />
+            </div>
+
+            {/* Unité */}
+            <div style={{ marginBottom: '12px' }}>
+              <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>
+                Unité par défaut
+              </label>
+              <select
+                value={addForm.default_unit}
+                onChange={e => setAddForm(f => ({ ...f, default_unit: e.target.value }))}
+                style={{
+                  width: '100%', background: 'var(--bg-tertiary)', border: 'none', borderRadius: '8px',
+                  padding: '8px 12px', color: 'var(--text-primary)', fontSize: '0.9rem', outline: 'none',
+                }}
+              >
+                <option value="">— aucune —</option>
+                {UNITS.filter(u => u).map(u => <option key={u} value={u}>{u}</option>)}
+              </select>
+            </div>
+
+            {/* Rayon */}
+            <div style={{ marginBottom: '12px' }}>
+              <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>
+                Rayon
+              </label>
+              <select
+                value={addForm.category}
+                onChange={e => setAddForm(f => ({ ...f, category: e.target.value }))}
+                style={{
+                  width: '100%', background: 'var(--bg-tertiary)', border: 'none', borderRadius: '8px',
+                  padding: '8px 12px', color: 'var(--text-primary)', fontSize: '0.9rem', outline: 'none',
+                }}
+              >
+                <option value="">— non défini —</option>
+                {CATEGORIES.filter(c => c).map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+
+            {/* Toggle show_qty */}
+            <div
+              onClick={() => setAddForm(f => ({ ...f, show_qty_in_list: f.show_qty_in_list ? 0 : 1 }))}
+              style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', marginBottom: '20px' }}
+            >
+              <div style={{
+                width: 36, height: 20, borderRadius: 10, position: 'relative', flexShrink: 0,
+                background: addForm.show_qty_in_list ? 'var(--accent)' : 'transparent',
+                border: addForm.show_qty_in_list ? 'none' : '2px solid var(--text-muted)',
+                transition: 'all 0.2s', boxSizing: 'border-box',
+              }}>
+                <div style={{
+                  position: 'absolute',
+                  top: addForm.show_qty_in_list ? 3 : 1,
+                  left: addForm.show_qty_in_list ? 18 : 1,
+                  width: 14, height: 14, borderRadius: '50%',
+                  background: addForm.show_qty_in_list ? '#fff' : 'var(--text-muted)',
+                  transition: 'all 0.2s',
+                }} />
+              </div>
+              <span style={{ fontSize: '0.85rem', color: 'var(--text-primary)' }}>
+                Afficher la quantité dans la liste
+              </span>
+            </div>
+
+            {/* Erreur */}
+            {addError && (
+              <div style={{
+                background: 'rgba(244,67,54,0.1)', border: '1px solid #f44336',
+                borderRadius: '8px', padding: '8px 12px', marginBottom: '16px',
+                fontSize: '0.85rem', color: '#f44336',
+              }}>
+                {addError}
+              </div>
+            )}
+
+            {/* Boutons */}
+            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+              <button onClick={closeAddModal} style={{
+                background: 'var(--bg-tertiary)', border: 'none', borderRadius: '8px',
+                padding: '8px 16px', color: 'var(--text-muted)', fontSize: '0.85rem', cursor: 'pointer',
+              }}>Annuler</button>
+              <button onClick={doAdd} disabled={adding} style={{
+                background: 'var(--accent)', border: 'none', borderRadius: '8px',
+                padding: '8px 16px', color: '#fff', fontSize: '0.85rem', cursor: 'pointer',
+                opacity: adding ? 0.7 : 1,
+              }}>{adding ? '…' : 'Ajouter'}</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Filtres */}
       <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>

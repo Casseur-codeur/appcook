@@ -570,6 +570,23 @@ def list_catalog(conn):
     ).fetchall()
 
 
+def insert_catalog_ingredient(conn, name: str, default_unit: str = '', category: str = '', show_qty: int = 1):
+    name = name.strip()
+    if not name:
+        raise ValueError("Le nom ne peut pas être vide")
+    existing = resolve_ingredient_id_by_name(conn, name)
+    if existing:
+        raise ValueError(f"L'ingrédient '{name}' existe déjà dans le catalogue")
+    norm = normalize_ingredient_name(name)
+    cur = conn.execute(
+        """INSERT INTO ingredient_catalog (name, norm_name, default_unit, category, show_qty_in_list)
+           VALUES (?, ?, ?, ?, ?)""",
+        (name, norm, default_unit or None, category or None, show_qty)
+    )
+    conn.commit()
+    return cur.lastrowid
+
+
 def set_catalog_show_qty(conn, ingredient_id: int, show_qty: int):
     conn.execute(
         "UPDATE ingredient_catalog SET show_qty_in_list=? WHERE id=?",
