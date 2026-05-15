@@ -34,6 +34,7 @@ case "$mode" in
             echo "AppCook frontend: HTTPS enabled in auto mode." >&2
         else
             render_template /etc/nginx/templates/nginx.http.conf.template
+            rm -f /etc/nginx/conf.d/nginx.https.conf
             echo "AppCook frontend: TLS files not found, serving HTTP only in auto mode." >&2
         fi
         ;;
@@ -47,6 +48,7 @@ case "$mode" in
         ;;
     off|http-only|disabled)
         render_template /etc/nginx/templates/nginx.http.conf.template
+        rm -f /etc/nginx/conf.d/nginx.https.conf
         echo "AppCook frontend: HTTPS disabled, serving HTTP only." >&2
         ;;
     *)
